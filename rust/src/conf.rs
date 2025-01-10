@@ -184,7 +184,7 @@ impl ProducerOption {
         self.topics = Some(topics.into_iter().map(|t| t.into()).collect());
     }
 
-    pub fn get_namespace(&self) -> &str {
+    pub fn namespace(&self) -> &str {
         &self.namespace
     }
     /// Set the namespace
