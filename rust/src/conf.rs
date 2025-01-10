@@ -184,12 +184,12 @@ impl ProducerOption {
         self.topics = Some(topics.into_iter().map(|t| t.into()).collect());
     }
 
-    // not expose to user for now
-    pub(crate) fn namespace(&self) -> &str {
+    pub fn get_namespace(&self) -> &str {
         &self.namespace
     }
-    pub(crate) fn set_namespace(&mut self, name_space: impl Into<String>) {
-        self.namespace = name_space.into();
+    /// Set the namespace
+    pub fn set_namespace(&mut self, namespace: impl Into<String>) {
+        self.namespace = namespace.into();
     }
 
     /// Whether to validate message type
