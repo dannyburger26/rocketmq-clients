@@ -156,7 +156,9 @@ impl Producer {
         self.shutdown_tx = Some(shutdown_tx);
         let rpc_client = self.client.get_session().await?;
         let endpoints = self.client.get_endpoints();
+
         let logger = self.logger.clone();
+        info!(logger, "endpoints: {:?}", endpoints);
         let producer_option = Arc::clone(&self.option);
         tokio::spawn(async move {
             loop {

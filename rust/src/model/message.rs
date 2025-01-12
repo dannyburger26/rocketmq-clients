@@ -175,6 +175,7 @@ impl MessageBuilder {
     /// * `delay_time` - delivery timestamp of message, specify when to deliver the message
     pub fn delay_message_builder(
         topic: impl Into<String>,
+        tag: Option<String>,
         body: Vec<u8>,
         delay_time: i64,
     ) -> MessageBuilder {
@@ -183,7 +184,7 @@ impl MessageBuilder {
                 message_id: UNIQ_ID_GENERATOR.lock().next_id(),
                 topic: topic.into(),
                 body: Some(body),
-                tag: None,
+                tag,
                 keys: None,
                 properties: None,
                 message_group: None,
@@ -492,7 +493,7 @@ mod tests {
         );
 
         let message =
-            MessageBuilder::delay_message_builder("test", vec![1, 2, 3], 123456789).build();
+            MessageBuilder::delay_message_builder("test", None, vec![1, 2, 3], 123456789).build();
         let mut message = message.unwrap();
         assert_eq!(message.take_delivery_timestamp(), Some(123456789));
 

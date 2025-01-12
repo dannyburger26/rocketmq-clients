@@ -409,7 +409,6 @@ impl Client {
             ),
         };
         let responses = rpc_client.receive_message(request).await?;
-
         let mut messages = Vec::with_capacity(batch_size as usize);
         for response in responses {
             match response.content.unwrap() {
@@ -595,6 +594,7 @@ impl TopicRouteManager {
         }
 
         let result = Self::query_topic_route(
+            self.logger.clone(),
             rpc_client,
             self.namespace.clone(),
             self.access_endpoints.clone(),
@@ -654,11 +654,15 @@ impl TopicRouteManager {
     }
 
     async fn query_topic_route<T: RPCClient + 'static>(
+        logger: Logger,
         rpc_client: &mut T,
         namespace: String,
         access_endpoints: Endpoints,
         topic: &str,
     ) -> Result<Route, ClientError> {
+        let host = access_endpoints.inner().addresses[0].host.clone();
+        let port = access_endpoints.inner().addresses[0].port;
+        
         let request = QueryRouteRequest {
             topic: Some(Resource {
                 name: topic.to_owned(),
@@ -669,10 +673,43 @@ impl TopicRouteManager {
 
         let response = rpc_client.query_route(request).await?;
         handle_response_status(response.status, OPERATION_QUERY_ROUTE)?;
+        let mut queue = Vec::new();
+        for mut message_queue in response.message_queues {
+            if message_queue.broker.is_none() {
+                continue;
+            }
+
+            let mut broker = message_queue.broker.clone().unwrap();
+            if broker.endpoints.is_none() {
+                continue;
+            }
+
+            let mut endpoints = broker.endpoints.clone().unwrap();
+            info!(logger, "endpoints: {:?}", endpoints);
+
+            let endpoint_addresses_len = endpoints.addresses.len();
+            if endpoint_addresses_len == 0 {
+                continue;
+            }
+
+            let mut endpoint_addresses = endpoints.addresses.clone();
+            for i in 0..endpoint_addresses_len {
+                let address = endpoints.addresses[i].clone();
+                endpoint_addresses[i].host = host.clone();
+                endpoint_addresses[i].port = port;
+                info!(logger, "address: {:?}", address);
+            }
+
+            endpoints.addresses = endpoint_addresses;
+            broker.endpoints = Some(endpoints);
+            message_queue.broker = Some(broker);
+
+            queue.push(message_queue.clone());
+        }
 
         let route = Route {
             index: AtomicUsize::new(0),
-            queue: response.message_queues,
+            queue,
         };
         Ok(route)
     }
